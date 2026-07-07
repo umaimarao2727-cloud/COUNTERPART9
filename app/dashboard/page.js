@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { scoreMatch } from "@/lib/matching";
 import MatchList from "./MatchList";
+import IncomingRequests from "./IncomingRequests";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -16,6 +17,16 @@ export default async function DashboardPage() {
 
   const { data: savedRows } = await supabase.from("saved_matches").select("matched_id").eq("user_id", user.id);
   const savedIds = (savedRows || []).map((r) => r.matched_id);
+
+  const { data: outgoing } = await supabase.from("intro_requests").select("*").eq("requester_id", user.id);
+  const { data: incoming } = await supabase.from("intro_requests").select("*").eq("target_id", user.id);
+
+  // attach the sender's profile info to each incoming request
+  const incomingWithProfiles = [];
+  for (const req of incoming || []) {
+    const { data: senderProfile } = await supabase.from("profiles").select("*").eq("id", req.requester_id).single();
+    incomingWithProfiles.push({ ...req, sender: senderProfile });
+  }
 
   const ranked = (candidates || [])
     .map((c) => ({ ...c, score: scoreMatch(profile, c) }))
@@ -38,12 +49,14 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <IncomingRequests requests={incomingWithProfiles} />
+
       {ranked.length === 0 ? (
         <div className="card" style={{ color: "var(--muted)", fontSize: 14 }}>
           No {oppositeLabel} have joined yet — check back soon.
         </div>
       ) : (
-        <MatchList matches={ranked} savedIds={savedIds} viewerRole={profile.role} />
+        <MatchList matches={ranked} savedIds={savedIds} viewerRole={profile.role} outgoingRequests={outgoing || []} />
       )}
     </div>
   );

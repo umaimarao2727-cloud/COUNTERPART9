@@ -40,6 +40,7 @@ export default function ProfilePage() {
       niche: form.niche,
       budget: Number(form.budget) || 0,
       bio: form.bio || "",
+      email: user.email,
     });
     setSaving(false);
 

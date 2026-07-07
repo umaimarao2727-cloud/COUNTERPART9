@@ -3,9 +3,14 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function MatchList({ matches, savedIds, viewerRole }) {
+export default function MatchList({ matches, savedIds, viewerRole, outgoingRequests }) {
   const supabase = createClient();
   const [saved, setSaved] = useState(new Set(savedIds));
+  const [requestStatus, setRequestStatus] = useState(() => {
+    const map = {};
+    (outgoingRequests || []).forEach((r) => { map[r.target_id] = r.status; });
+    return map;
+  });
   const accent = viewerRole === "business" ? "var(--teal)" : "var(--brass)";
   const dim = viewerRole === "business" ? "var(--teal-dim)" : "var(--brass-dim)";
 
@@ -25,10 +30,29 @@ export default function MatchList({ matches, savedIds, viewerRole }) {
     }
   }
 
+  async function requestIntro(matchedId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setRequestStatus((prev) => ({ ...prev, [matchedId]: "pending" })); // optimistic
+
+    const { error } = await supabase.from("intro_requests").insert({
+      requester_id: user.id,
+      target_id: matchedId,
+    });
+
+    if (error) {
+      // most likely a duplicate request — leave the optimistic pending state,
+      // since that means one already exists
+      console.error(error);
+    }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 1, background: "var(--line)", border: "1px solid var(--line)" }}>
       {matches.map((m) => {
         const isSaved = saved.has(m.id);
+        const status = requestStatus[m.id];
         return (
           <div key={m.id} style={{ background: "var(--paper)", padding: 24, display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 220 }}>
@@ -41,18 +65,28 @@ export default function MatchList({ matches, savedIds, viewerRole }) {
                 {viewerRole === "business" ? "Rate" : "Budget"}: ${Number(m.budget || 0).toLocaleString()}/mo
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, minWidth: 120 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, minWidth: 140 }}>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24 }}>{m.score}%</div>
                 <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>match score</div>
               </div>
-              <button
-                onClick={() => toggleSave(m.id)}
-                className="btn btn-ghost"
-                style={{ borderColor: isSaved ? accent : "var(--line)", color: isSaved ? accent : "var(--ink)" }}
-              >
-                {isSaved ? "Saved ✓" : "Save"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => toggleSave(m.id)}
+                  className="btn btn-ghost"
+                  style={{ borderColor: isSaved ? accent : "var(--line)", color: isSaved ? accent : "var(--ink)" }}
+                >
+                  {isSaved ? "Saved ✓" : "Save"}
+                </button>
+                <button
+                  onClick={() => requestIntro(m.id)}
+                  disabled={!!status}
+                  className="btn btn-primary"
+                  style={{ background: accent, opacity: status ? 0.6 : 1, cursor: status ? "default" : "pointer" }}
+                >
+                  {status === "accepted" ? "Connected ✓" : status === "declined" ? "Declined" : status === "pending" ? "Requested" : "Request intro"}
+                </button>
+              </div>
             </div>
           </div>
         );
