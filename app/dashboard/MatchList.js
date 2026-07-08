@@ -60,6 +60,11 @@ export default function MatchList({ matches, savedIds, viewerRole, outgoingReque
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: "'Fraunces', serif", fontSize: 19 }}>{m.name}</span>
                 <span className="mono" style={{ fontSize: 11, padding: "3px 8px", background: dim, color: accent }}>{m.niche}</span>
+                {viewerRole === "business" && m.accepting_clients === false && (
+                  <span className="mono" style={{ fontSize: 11, padding: "3px 8px", background: "#F0E3C8", color: "#8B5A1E" }}>
+                    Not taking new clients
+                  </span>
+                )}
                 {m.portfolio_link && (
                   <a href={m.portfolio_link} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 11, color: "var(--muted)", textDecoration: "underline" }}>
                     View portfolio ↗
@@ -93,11 +98,23 @@ export default function MatchList({ matches, savedIds, viewerRole, outgoingReque
                 </button>
                 <button
                   onClick={() => requestIntro(m.id)}
-                  disabled={!!status}
+                  disabled={!!status || (viewerRole === "business" && m.accepting_clients === false)}
                   className="btn btn-primary"
-                  style={{ background: accent, opacity: status ? 0.6 : 1, cursor: status ? "default" : "pointer" }}
+                  style={{
+                    background: accent,
+                    opacity: status || (viewerRole === "business" && m.accepting_clients === false) ? 0.5 : 1,
+                    cursor: status || (viewerRole === "business" && m.accepting_clients === false) ? "default" : "pointer",
+                  }}
                 >
-                  {status === "accepted" ? "Connected ✓" : status === "declined" ? "Declined" : status === "pending" ? "Requested" : "Request intro"}
+                  {status === "accepted"
+                    ? "Connected ✓"
+                    : status === "declined"
+                    ? "Declined"
+                    : status === "pending"
+                    ? "Requested"
+                    : viewerRole === "business" && m.accepting_clients === false
+                    ? "Unavailable"
+                    : "Request intro"}
                 </button>
               </div>
             </div>

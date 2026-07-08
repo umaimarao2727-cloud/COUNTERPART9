@@ -27,6 +27,7 @@ export default function ProfilePage() {
     bio: "",
     portfolio_link: "",
     services_offered: [],
+    accepting_clients: true,
   });
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function ProfilePage() {
         return;
       }
       const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-      if (profile) setForm({ ...profile, services_offered: profile.services_offered || [] });
+      if (profile) setForm({ ...profile, services_offered: profile.services_offered || [], accepting_clients: profile.accepting_clients !== false });
       setLoading(false);
     })();
   }, []);
@@ -70,6 +71,7 @@ export default function ProfilePage() {
       email: user.email,
       portfolio_link: form.portfolio_link || "",
       services_offered: form.role === "manager" ? (form.services_offered || []) : [],
+      accepting_clients: form.role === "manager" ? form.accepting_clients !== false : true,
     });
     setSaving(false);
 
@@ -163,6 +165,36 @@ export default function ProfilePage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {form.role === "manager" && (
+          <div className="field">
+            Availability
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              {[
+                { label: "Accepting new clients", value: true },
+                { label: "Not taking new clients right now", value: false },
+              ].map((opt) => (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  onClick={() => setForm({ ...form, accepting_clients: opt.value })}
+                  style={{
+                    flex: 1,
+                    padding: "12px 14px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: `1px solid ${form.accepting_clients === opt.value ? "var(--brass)" : "var(--line)"}`,
+                    background: form.accepting_clients === opt.value ? "var(--brass-dim)" : "white",
+                    color: "var(--ink)",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
         )}
