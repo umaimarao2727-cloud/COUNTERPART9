@@ -56,7 +56,21 @@ export default function MatchList({ matches, savedIds, viewerRole, outgoingReque
         const services = m.services_offered || [];
         return (
           <div key={m.id} style={{ background: "var(--paper)", padding: 24, display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ flex: 1, minWidth: 220, display: "flex", gap: 14 }}>
+              <div
+                style={{
+                  width: 44, height: 44, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+                  background: "var(--line)", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "'Fraunces', serif", fontSize: 17, color: "var(--muted)",
+                }}
+              >
+                {m.avatar_url ? (
+                  <img src={m.avatar_url} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  (m.name || "?").charAt(0).toUpperCase()
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: "'Fraunces', serif", fontSize: 19 }}>{m.name}</span>
                 <span className="mono" style={{ fontSize: 11, padding: "3px 8px", background: dim, color: accent }}>{m.niche}</span>
@@ -81,6 +95,7 @@ export default function MatchList({ matches, savedIds, viewerRole, outgoingReque
               )}
               <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
                 {viewerRole === "business" ? "Rate" : "Budget"}: ${Number(m.budget || 0).toLocaleString()}/mo
+              </div>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, minWidth: 140 }}>

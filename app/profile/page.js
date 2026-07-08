@@ -19,6 +19,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     role: "business",
@@ -28,6 +29,7 @@ export default function ProfilePage() {
     portfolio_link: "",
     services_offered: [],
     accepting_clients: true,
+    avatar_url: "",
   });
 
   useEffect(() => {
@@ -53,6 +55,38 @@ export default function ProfilePage() {
     });
   }
 
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErr("Image is too large — please pick one under 5MB.");
+      return;
+    }
+
+    setErr("");
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setUploading(false);
+      setErr("Couldn't upload that image. Try a different file.");
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    // cache-bust so the new image shows immediately instead of a stale cached one
+    const freshUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    setForm((prev) => ({ ...prev, avatar_url: freshUrl }));
+    setUploading(false);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setErr("");
@@ -72,6 +106,7 @@ export default function ProfilePage() {
       portfolio_link: form.portfolio_link || "",
       services_offered: form.role === "manager" ? (form.services_offered || []) : [],
       accepting_clients: form.role === "manager" ? form.accepting_clients !== false : true,
+      avatar_url: form.avatar_url || "",
     });
     setSaving(false);
 
@@ -93,6 +128,29 @@ export default function ProfilePage() {
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 28 }}>
         This is what the other side sees when you're matched. Be specific.
       </p>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+        <div
+          style={{
+            width: 64, height: 64, borderRadius: "50%", overflow: "hidden",
+            background: "var(--line)", display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, fontFamily: "'Fraunces', serif", fontSize: 24, color: "var(--muted)",
+          }}
+        >
+          {form.avatar_url ? (
+            <img src={form.avatar_url} alt="Your avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            (form.name || "?").charAt(0).toUpperCase()
+          )}
+        </div>
+        <div>
+          <label className="btn btn-ghost" style={{ cursor: "pointer", display: "inline-flex" }}>
+            {uploading ? "Uploading…" : "Upload photo"}
+            <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} style={{ display: "none" }} />
+          </label>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>JPG or PNG, up to 5MB.</div>
+        </div>
+      </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
         {["business", "manager"].map((r) => (
