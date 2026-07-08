@@ -53,14 +53,27 @@ export default function MatchList({ matches, savedIds, viewerRole, outgoingReque
       {matches.map((m) => {
         const isSaved = saved.has(m.id);
         const status = requestStatus[m.id];
+        const services = m.services_offered || [];
         return (
           <div key={m.id} style={{ background: "var(--paper)", padding: 24, display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: "'Fraunces', serif", fontSize: 19 }}>{m.name}</span>
                 <span className="mono" style={{ fontSize: 11, padding: "3px 8px", background: dim, color: accent }}>{m.niche}</span>
+                {m.portfolio_link && (
+                  <a href={m.portfolio_link} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 11, color: "var(--muted)", textDecoration: "underline" }}>
+                    View portfolio ↗
+                  </a>
+                )}
               </div>
               <p style={{ fontSize: 14, color: "var(--muted)", maxWidth: 460 }}>{m.bio || "No bio provided yet."}</p>
+              {services.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                  {services.map((s) => (
+                    <span key={s} style={{ fontSize: 11, padding: "3px 8px", border: "1px solid var(--line)", color: "var(--muted)" }}>{s}</span>
+                  ))}
+                </div>
+              )}
               <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
                 {viewerRole === "business" ? "Rate" : "Budget"}: ${Number(m.budget || 0).toLocaleString()}/mo
               </div>

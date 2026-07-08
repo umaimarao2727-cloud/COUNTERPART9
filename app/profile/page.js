@@ -4,13 +4,30 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const SERVICE_OPTIONS = [
+  "Content creation",
+  "Ads management",
+  "Community management",
+  "Strategy & planning",
+  "Copywriting",
+  "Analytics & reporting",
+];
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
-  const [form, setForm] = useState({ name: "", role: "business", niche: "", budget: "", bio: "" });
+  const [form, setForm] = useState({
+    name: "",
+    role: "business",
+    niche: "",
+    budget: "",
+    bio: "",
+    portfolio_link: "",
+    services_offered: [],
+  });
 
   useEffect(() => {
     (async () => {
@@ -20,10 +37,20 @@ export default function ProfilePage() {
         return;
       }
       const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-      if (profile) setForm(profile);
+      if (profile) setForm({ ...profile, services_offered: profile.services_offered || [] });
       setLoading(false);
     })();
   }, []);
+
+  function toggleService(service) {
+    setForm((prev) => {
+      const current = prev.services_offered || [];
+      const next = current.includes(service)
+        ? current.filter((s) => s !== service)
+        : [...current, service];
+      return { ...prev, services_offered: next };
+    });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -41,6 +68,8 @@ export default function ProfilePage() {
       budget: Number(form.budget) || 0,
       bio: form.bio || "",
       email: user.email,
+      portfolio_link: form.portfolio_link || "",
+      services_offered: form.role === "manager" ? (form.services_offered || []) : [],
     });
     setSaving(false);
 
@@ -98,6 +127,46 @@ export default function ProfilePage() {
           {form.role === "business" ? "Monthly budget (USD)" : "Monthly rate expectation (USD)"}
           <input className="input" type="number" min="0" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="1500" />
         </label>
+        <label className="field">
+          {form.role === "business" ? "Business website (optional)" : "Portfolio or social link"}
+          <input
+            className="input"
+            value={form.portfolio_link || ""}
+            onChange={(e) => setForm({ ...form, portfolio_link: e.target.value })}
+            placeholder={form.role === "business" ? "https://yourbusiness.com" : "https://instagram.com/yourhandle"}
+          />
+        </label>
+
+        {form.role === "manager" && (
+          <div className="field">
+            Services you offer
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+              {SERVICE_OPTIONS.map((service) => {
+                const checked = (form.services_offered || []).includes(service);
+                return (
+                  <button
+                    key={service}
+                    type="button"
+                    onClick={() => toggleService(service)}
+                    style={{
+                      padding: "8px 14px",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      border: `1px solid ${checked ? "var(--brass)" : "var(--line)"}`,
+                      background: checked ? "var(--brass-dim)" : "white",
+                      color: "var(--ink)",
+                      borderRadius: 2,
+                    }}
+                  >
+                    {checked ? "✓ " : ""}{service}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <label className="field">
           {form.role === "business" ? "What are you hoping to achieve?" : "A short pitch for clients"}
           <textarea className="input" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
